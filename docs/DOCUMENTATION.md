@@ -12,8 +12,8 @@ _Pending: the documentation agent will write this section._
 
 <!-- AUTO:glance -->
 - **Files:** 18
-- **Python modules:** 7 (14 top-level functions)
-- **HTTP endpoints:** 5
+- **Python modules:** 6 (12 top-level functions)
+- **HTTP endpoints:** 3
 - **Test files:** 2
 - **Third-party libraries imported:** `flask`
 - **Environment variables:** 4
@@ -30,10 +30,6 @@ flowchart LR
   end
   m_config["config.py"]
   m_db_store["db/store.py"]
-  subgraph m_routes_orders["routes/orders.py"]
-    m_routes_orders_e0["POST /orders"]
-    m_routes_orders_e1["GET /orders/{order_id}"]
-  end
   subgraph m_routes_products["routes/products.py"]
     m_routes_products_e0["GET /products"]
     m_routes_products_e1["GET /products/{product_id}"]
@@ -41,23 +37,16 @@ flowchart LR
   m_services_inventory["services/inventory.py"]
   m_services_pricing["services/pricing.py"]
   client --> m_app_e0
-  client --> m_routes_orders_e0
-  client --> m_routes_orders_e1
   client --> m_routes_products_e0
   client --> m_routes_products_e1
   m_app --> m_config
-  m_app --> m_routes_orders
   m_app --> m_routes_products
-  m_routes_orders --> m_db_store
-  m_routes_orders --> m_services_inventory
-  m_routes_orders --> m_services_pricing
   m_routes_products --> m_db_store
   m_services_inventory --> m_config
   m_services_inventory --> m_db_store
   m_services_pricing --> m_config
   ext_flask(["flask"])
   m_app -.-> ext_flask
-  m_routes_orders -.-> ext_flask
   m_routes_products -.-> ext_flask
 ```
 <!-- /AUTO:architecture -->
@@ -69,52 +58,6 @@ _Pending: the documentation agent will write this section._
 ## Request Flows
 
 <!-- AUTO:flows -->
-#### `POST /orders`
-
-Handler: `create_order` in `routes/orders.py`
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Client
-  participant p_routes_orders as routes/orders.py
-  participant p_db_store as db/store.py
-  participant p_services_inventory as services/inventory.py
-  participant p_services_pricing as services/pricing.py
-  Client->>p_routes_orders: POST /orders
-  p_routes_orders->>p_db_store: get_product()
-  p_db_store-->>p_routes_orders: result
-  p_routes_orders->>p_services_inventory: check_stock()
-  p_services_inventory->>p_db_store: get_product()
-  p_db_store-->>p_services_inventory: result
-  p_services_inventory-->>p_routes_orders: result
-  p_routes_orders->>p_services_pricing: apply_discount()
-  p_services_pricing-->>p_routes_orders: result
-  p_routes_orders->>p_services_pricing: add_tax()
-  p_services_pricing-->>p_routes_orders: result
-  p_routes_orders->>p_db_store: reduce_stock()
-  p_db_store-->>p_routes_orders: result
-  p_routes_orders->>p_db_store: save_order()
-  p_db_store-->>p_routes_orders: result
-  p_routes_orders-->>Client: response
-```
-
-#### `GET /orders/{order_id}`
-
-Handler: `get_order` in `routes/orders.py`
-
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Client
-  participant p_routes_orders as routes/orders.py
-  participant p_db_store as db/store.py
-  Client->>p_routes_orders: GET /orders/{order_id}
-  p_routes_orders->>p_db_store: get_order()
-  p_db_store-->>p_routes_orders: result
-  p_routes_orders-->>Client: response
-```
-
 #### `GET /products`
 
 Handler: `list_products` in `routes/products.py`
@@ -161,7 +104,7 @@ shop-api/
 │   └── store.py  # In-memory data store for products and orders (swap for a real DB later).
 ├── routes/
 │   ├── __init__.py
-│   ├── orders.py  # HTTP endpoints for placing and reading orders.
+│   ├── orders.py
 │   └── products.py  # HTTP endpoints for the product catalogue.
 ├── services/
 │   ├── __init__.py
@@ -186,8 +129,6 @@ shop-api/
 | Method | Path | Handler | Location | Description |
 |---|---|---|---|---|
 | `GET` | `/health` | `health` | `app.py:15` | Liveness probe. |
-| `POST` | `/orders` | `create_order` | `routes/orders.py:11` | Create an order: check stock, apply discount and tax, save. |
-| `GET` | `/orders/{order_id}` | `get_order` | `routes/orders.py:28` | Get one order by id. |
 | `GET` | `/products` | `list_products` | `routes/products.py:10` | List all products. |
 | `GET` | `/products/{product_id}` | `get_product` | `routes/products.py:16` | Get one product by id. |
 <!-- /AUTO:api -->
@@ -219,15 +160,6 @@ In-memory data store for products and orders (swap for a real DB later).
 | `reduce_stock(product_id: int, qty: int) -> None` | function | Decrease stock after a successful order. |
 | `save_order(order: dict) -> dict` | function | Persist an order and assign it an id. |
 | `get_order(order_id: int) -> Optional[dict]` | function | Return one order or None. |
-
-### `routes/orders.py`
-
-HTTP endpoints for placing and reading orders.
-
-| Signature | Kind | Description |
-|---|---|---|
-| `create_order()` | function | Create an order: check stock, apply discount and tax, save. |
-| `get_order(order_id)` | function | Get one order by id. |
 
 ### `routes/products.py`
 
