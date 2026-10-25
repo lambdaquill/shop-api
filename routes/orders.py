@@ -31,3 +31,7 @@ def get_order(order_id):
     if order is None:
         return jsonify({"error": "not found"}), 404
     return jsonify(order)
+    @bp.route("/<int:order_id>/cancel", methods=["POST"])
+def cancel_order(order_id):
+    """Cancel an existing order."""
+    return jsonify({"cancelled": order_id})
